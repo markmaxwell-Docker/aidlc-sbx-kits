@@ -54,8 +54,24 @@ Then each kit here is consumed directly from this repo, pinned to a tag —
 verified live against the tags this repo actually publishes:
 
 ```sh
-sbx run --kit "git+https://github.com/markmaxwell-Docker/aidlc-sbx-kits.git#ref=aidlc-quickstart-v0.2.0&dir=aidlc-quickstart" claude .
+sbx run --kit "git+https://github.com/markmaxwell-Docker/aidlc-sbx-kits.git#ref=aidlc-quickstart-v0.2.1&dir=aidlc-quickstart" claude .
 ```
+
+Every kit is signed — keyless (Sigstore/Fulcio + Rekor), bound to the
+`sign.yml` GitHub Actions workflow's own OIDC identity, not a private key
+anyone has to hold or lose. Verify before running, on the exact pinned
+reference above — verified live against the real published tag:
+
+```sh
+sbx kit verify \
+  --certificate-identity-regexp "^https://github.com/markmaxwell-Docker/aidlc-sbx-kits/" \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  "git+https://github.com/markmaxwell-Docker/aidlc-sbx-kits.git#ref=aidlc-quickstart-v0.2.1&dir=aidlc-quickstart"
+```
+
+**Tags before `v0.4.1`/`v0.2.1` (i.e. the original `v0.4.0`/`v0.2.0`) predate
+signing and are unsigned** — `sbx kit verify` against them fails with `kit
+is not signed`, confirmed directly. Use `v0.4.1`/`v0.2.1` or later.
 
 Or clone locally and reference by path — convenient for trying changes before pinning:
 
@@ -194,7 +210,7 @@ split, plus the two compose-time checks above. Those are not advisory.
 
 ## Versioning
 
-Each kit is tagged independently, e.g. `aidlc-common-v0.4.0`, since they're
+Each kit is tagged independently, e.g. `aidlc-common-v0.4.1`, since they're
 composed (and can be pinned) independently. See each kit's own header
 comment for its current version and minimum required schema.
 

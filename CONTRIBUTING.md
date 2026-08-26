@@ -52,10 +52,41 @@ rather than let it be assumed.
 ## Versioning and tagging
 
 Each kit is tagged independently: `<kit-name>-v<semver>`, e.g.
-`aidlc-common-v0.4.0`. Bump the version in the kit's own header comment
+`aidlc-common-v0.4.1`. Bump the version in the kit's own header comment
 before tagging. A consumer may pin `aidlc-common` and `aidlc-construction`
 at different points, so keep tags independent even when a PR touches
 multiple kits.
+
+## Signing releases
+
+Every kit is signed via `.github/workflows/sign.yml` — keyless (Sigstore
+Fulcio + Rekor), bound to that workflow's own GitHub Actions OIDC identity.
+No private key exists to generate, store, rotate, or lose.
+
+Run it (`gh workflow run sign.yml` or the Actions tab) **before** tagging a
+release that changes any kit's `spec.yaml` or `files/`, since the signature
+covers those exact bytes — a version bump or content change after signing
+invalidates the existing `kit.sig.bundle` for that kit. The workflow signs
+all five kits, verifies each signature immediately (fails the job if
+verification doesn't pass — don't commit an unverified signature), then
+commits the resulting `kit.sig.bundle` sidecars to `main`. Tag only after
+that commit lands.
+
+Verify any kit before trusting it:
+
+```sh
+sbx kit verify \
+  --certificate-identity-regexp "^https://github.com/markmaxwell-Docker/aidlc-sbx-kits/" \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  ./aidlc-common
+```
+
+Tags before `v0.4.1`/`v0.2.1` predate this and are unsigned — confirmed
+directly (`sbx kit verify` against the original `aidlc-common-v0.4.0` tag
+fails with `kit is not signed`). Those tags were not moved forward — see
+README.md's own "tags on this repo don't move" commitment — so they stay
+unsigned permanently; point anyone using them at the signed `v0.4.1`/`v0.2.1`
+or later instead.
 
 ## Per-kit README
 
