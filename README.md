@@ -22,7 +22,17 @@ still not shipped or not enforced by the engine.
 
 ## Install
 
-Each kit here is consumed directly from this repo, pinned to a tag:
+Remote kit sources are allowlisted by `sbx` — by default only `docker.io/`
+is trusted. Allow this repo once, verified directly against a real `sbx`
+binary (attempting the pull below without this step fails with `its source
+is not in your allowlist`):
+
+```sh
+sbx settings set kit.allowedSources '["docker.io/","github.com/markmaxwell-Docker/"]'
+```
+
+Then each kit here is consumed directly from this repo, pinned to a tag —
+verified live against the tags this repo actually publishes:
 
 ```sh
 sbx run --kit "git+https://github.com/markmaxwell-Docker/aidlc-sbx-kits.git#ref=aidlc-quickstart-v0.2.0&dir=aidlc-quickstart" claude .
