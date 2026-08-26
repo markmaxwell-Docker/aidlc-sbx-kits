@@ -1,6 +1,6 @@
-# aidlc-operations v0.4.0 — Apache-2.0
+# aidlc-operations v0.4.1 — Apache-2.0
 schemaVersion: "2"
-version: "0.4.0"
+version: "0.4.1"
 sourceURL: https://github.com/markmaxwell-Docker/aidlc-sbx-kits
 licenses:
   - Apache-2.0

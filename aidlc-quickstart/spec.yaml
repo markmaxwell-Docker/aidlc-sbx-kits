@@ -1,4 +1,4 @@
-# aidlc-quickstart v0.2.0 — Apache-2.0
+# aidlc-quickstart v0.2.1 — Apache-2.0
 #
 # The "single-container proof of concept" shape: one kit, one sandbox, the
 # whole AI-DLC lifecycle. This is the fast-adoption front door, NOT the
@@ -9,7 +9,7 @@
 # agentInstructions below for exactly what this gives up and when to
 # graduate off it.
 schemaVersion: "2"
-version: "0.2.0"
+version: "0.2.1"
 sourceURL: https://github.com/markmaxwell-Docker/aidlc-sbx-kits
 licenses:
   - Apache-2.0

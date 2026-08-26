@@ -1,4 +1,4 @@
-# aidlc-common v0.4.0 — Apache-2.0
+# aidlc-common v0.4.1 — Apache-2.0
 # schemaVersion "2", verified directly against a real installed sbx binary
 # (v0.39.0): requires.agent, permissions.network.allow/deny,
 # credentials[].apiKey.inject, setup.install/startup/files, and
@@ -6,7 +6,7 @@
 # limits" section for what's still not shipped (args:) or not enforced
 # (all-egress-declared) by the engine.
 schemaVersion: "2"
-version: "0.4.0"
+version: "0.4.1"
 sourceURL: https://github.com/markmaxwell-Docker/aidlc-sbx-kits
 licenses:
   - Apache-2.0
