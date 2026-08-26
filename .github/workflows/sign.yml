@@ -1,0 +1,46 @@
+name: sign
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  id-token: write # required to mint the ambient OIDC token for keyless Sigstore signing
+
+jobs:
+  sign:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install sbx
+        run: brew install docker/tap/sbx
+
+      - name: Sign each kit (keyless — Fulcio + Rekor, using this workflow's own OIDC identity)
+        run: |
+          for kit in aidlc-common aidlc-inception aidlc-construction aidlc-operations aidlc-quickstart; do
+            echo "=== signing $kit ==="
+            sbx kit sign "./$kit"
+          done
+
+      - name: Verify each signature before committing it
+        run: |
+          for kit in aidlc-common aidlc-inception aidlc-construction aidlc-operations aidlc-quickstart; do
+            echo "=== verifying $kit ==="
+            sbx kit verify \
+              --certificate-identity-regexp "^https://github.com/${{ github.repository }}/" \
+              --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+              "./$kit"
+          done
+
+      - name: Commit signature bundles
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add */kit.sig.bundle
+          if git diff --cached --quiet; then
+            echo "No signature changes to commit."
+            exit 0
+          fi
+          git commit -m "Sign all kits (keyless, workflow-identity-bound)"
+          git push

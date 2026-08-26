@@ -165,8 +165,12 @@ GitHub's own documented convention for token-authenticated git-over-HTTPS.
    spec but not shipped in any released `sbx` as of this writing** — probe-
    tested directly against v0.38.0 and v0.39.0, both reject it. That's why
    `registry-1.docker.io` / `auth.docker.io` in `aidlc-operations` and
-   `aidlc-quickstart` are still a plain literal: replace them with your org's
-   registry mirror before using either kit beyond a trial.
+   `aidlc-quickstart` are still a plain literal instead of a `--kit-arg` flag.
+   `scripts/set-registry.sh <host> [<auth-host>]` closes the practical gap —
+   edits both the allowlist and the credential inject domain and
+   re-validates the result — but the underlying schema limitation (no
+   installer-time parameterization) is still real; revisit once `args:`
+   ships.
 3. **All-egress-declared is a discipline, not an enforced check.** The spec
    says every `credentials[].apiKey.inject[].domain` MUST appear in
    `permissions.network.allow` — verified directly that neither `sbx kit
