@@ -1,0 +1,60 @@
+# aidlc-construction v0.4.0 — Apache-2.0
+schemaVersion: "2"
+version: "0.4.0"
+sourceURL: https://github.com/markmaxwell-Docker/aidlc-sbx-kits
+licenses:
+  - Apache-2.0
+kind: mixin
+name: aidlc-construction
+requires:
+  agent: claude
+displayName: AI-DLC — Construction
+description: >-
+  Mob Construction persona. Domain model, code, tests. Adds package-registry
+  egress. No deploy credentials and no production egress. Compose with
+  aidlc-common.
+
+permissions:
+  network:
+    allow:
+      - "registry.npmjs.org"
+      - "*.npmjs.org"
+      - "pypi.org"
+      - "files.pythonhosted.org"
+
+environment:
+  variables:
+    AIDLC_PHASE: "construction"
+
+setup:
+  startup:
+    - command: ["sh", "-c", "$HOME/.aidlc/preflight.sh \"$PWD/.aidlc/inception\" intent.md units.md nfr.md || true"]
+      user: "1000"
+      description: "Gate check — Inception artifacts must exist before building"
+
+agentInstructions:
+  content: |
+    ## Phase: Construction (Mob Construction)
+
+    ### Gate
+    Read `.aidlc/inception/units.md` first. If it is absent or unsigned, stop
+    and say so. You do not invent requirements — that happened in a different
+    sandbox with a different set of people in the room.
+
+    ### Deliverables — write to `.aidlc/construction/`
+    - `design.md` — domain model and logical architecture, validated by a human
+      BEFORE any code is generated
+    - implementation and tests for one Unit of Work per bolt
+
+    ### Method
+    One Unit per bolt. Propose the domain model, stop, wait. Then generate.
+    Tests assert on behavior, never on the exact text a model produced.
+
+    ### Dependency rule
+    You have registry egress so that approved installs work — not so that you
+    can add dependencies at will. Every new dependency stops the bolt and asks.
+    Lockfiles are committed; a silent lockfile regeneration is a defect.
+
+    ### What you do not have
+    No deploy credentials, no production egress, no infrastructure access. If a
+    task needs them, it belongs to Operations. Say so and stop.

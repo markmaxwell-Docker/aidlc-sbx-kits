@@ -1,0 +1,80 @@
+# aidlc-operations v0.4.0 — Apache-2.0
+schemaVersion: "2"
+version: "0.4.0"
+sourceURL: https://github.com/markmaxwell-Docker/aidlc-sbx-kits
+licenses:
+  - Apache-2.0
+kind: mixin
+name: aidlc-operations
+requires:
+  agent: claude
+displayName: AI-DLC — Operations
+description: >-
+  Deployment and telemetry persona. Holds the only deploy credential in the
+  set. Package registries denied — nothing gets installed at deploy time.
+  Compose with aidlc-common.
+
+# Registry the built image is pushed to / pulled from.
+# KNOWN LIMIT: schemaVersion "2" has no shipped `args:` mechanism yet (probe-
+# tested against a real sbx v0.39.0 binary — rejected). Until args: ships,
+# replace registry-1.docker.io / auth.docker.io below with your org's mirror
+# before using this kit for anything beyond a trial.
+permissions:
+  network:
+    allow:
+      - "registry-1.docker.io"
+      - "auth.docker.io"
+    deny:
+      # Deploy time is not install time.
+      - "registry.npmjs.org"
+      - "pypi.org"
+      - "files.pythonhosted.org"
+
+credentials:
+  - service: docker-registry
+    description: "Registry push token — the only write credential in the kit set."
+    required: false
+    apiKey:
+      name: REGISTRY_TOKEN
+      proxyManaged: true
+      inject:
+        - domain: registry-1.docker.io
+          scheme: bearer
+        - domain: auth.docker.io
+          scheme: bearer
+
+environment:
+  variables:
+    AIDLC_PHASE: "operations"
+
+setup:
+  startup:
+    - command: ["sh", "-c", "$HOME/.aidlc/preflight.sh \"$PWD/.aidlc/construction\" design.md || true"]
+      user: "1000"
+      description: "Gate check — Construction artifacts must exist before deploying"
+
+agentInstructions:
+  content: |
+    ## Phase: Operations
+
+    ### Gate
+    `.aidlc/construction/design.md` must exist and tests must be passing. If
+    either is false, stop.
+
+    ### Deliverables — write to `.aidlc/operations/`
+    - infrastructure and deployment configuration
+    - `runbook.md` — how this is operated, what alerts mean, how it rolls back
+
+    ### Method
+    Base images come from the organization's hardened catalog. A Dockerfile
+    reaching for a base image outside that catalog stops the bolt.
+
+    Secrets are read from the environment at runtime. Never at build time,
+    never baked into an image layer, never in a Compose file committed to git.
+
+    Every deployment is reversible. If you cannot describe the rollback, the
+    change is not ready.
+
+    ### You hold the only write credential
+    This sandbox can push to a registry. Treat that as the reason to be slower,
+    not faster. Any push is a human-approved action, every time.

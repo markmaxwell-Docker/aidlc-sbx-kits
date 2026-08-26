@@ -1,0 +1,136 @@
+# aidlc-common v0.4.0 — Apache-2.0
+# schemaVersion "2", verified directly against a real installed sbx binary
+# (v0.39.0): requires.agent, permissions.network.allow/deny,
+# credentials[].apiKey.inject, setup.install/startup/files, and
+# agentInstructions.content all validate. See the repo README's "Known
+# limits" section for what's still not shipped (args:) or not enforced
+# (all-egress-declared) by the engine.
+schemaVersion: "2"
+version: "0.4.0"
+sourceURL: https://github.com/markmaxwell-Docker/aidlc-sbx-kits
+licenses:
+  - Apache-2.0
+kind: mixin
+name: aidlc-common
+requires:
+  agent: claude
+displayName: AI-DLC Common
+description: >-
+  Shared AI-DLC floor — steering files, method context, bolt logging, and the
+  minimum egress every phase needs. Layer exactly one phase kit on top
+  (aidlc-inception / aidlc-construction / aidlc-operations), or use
+  aidlc-quickstart alone for a single-sandbox trial.
+
+# The FLOOR only. allow/deny union across composed kits — allow cannot be
+# narrowed by a child kit, so anything phase-specific lives in the phase kit,
+# never here.
+#
+# The claude agent kit already owns the "anthropic" credential service. A
+# second credentials[] entry for "anthropic" here is not redundancy, it is a
+# hard compose error (duplicate service). This kit only adds what the base
+# agent doesn't already provide: GitHub.
+permissions:
+  network:
+    allow:
+      - "*.anthropic.com"
+      - "github.com"
+      - "*.github.com"
+      - "*.githubusercontent.com"
+    deny:
+      - "telemetry.anthropic.com"
+
+credentials:
+  - service: github
+    description: "GitHub token — scope it to the single repo under development."
+    required: false
+    apiKey:
+      name: GITHUB_TOKEN
+      proxyManaged: true
+      inject:
+        - domain: api.github.com
+          scheme: bearer
+        - domain: raw.githubusercontent.com
+          scheme: bearer
+        # HTTPS git clone/push (not the REST API) authenticates over Basic
+        # with the token as the password — GitHub's documented convention is
+        # any non-empty username, "x-access-token" by their own example.
+        - domain: github.com
+          scheme: basic
+          username: x-access-token
+
+environment:
+  variables:
+    AIDLC_ENABLED: "1"
+    DISABLE_TELEMETRY: "1"
+
+setup:
+  install:
+    - command: "command -v jq >/dev/null 2>&1 || (apt-get update -qq && apt-get install -y -qq jq)"
+      description: "jq — used by the bolt-log and preflight helpers"
+
+  startup:
+    - command: ["sh", "-c", "mkdir -p /home/agent/.aidlc/bolts"]
+      user: "1000"
+      description: "Bolt log directory (startup runs every start — idempotent)"
+
+  files:
+    - path: /home/agent/.aidlc/bolt-log.sh
+      mode: "0755"
+      onlyIfMissing: true
+      description: "Append-only bolt record: phase, intent, timestamp, git SHA"
+      content: |
+        #!/bin/sh
+        set -eu
+        LOG="$HOME/.aidlc/bolts/$(date -u +%Y%m%d).jsonl"
+        SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "no-git")
+        PHASE="$AIDLC_PHASE"
+        [ -n "$PHASE" ] || PHASE="unset"
+        printf '{"ts":"%s","phase":"%s","intent":"%s","sha":"%s"}\n' \
+          "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$PHASE" "$1" "$SHA" >> "$LOG"
+        echo "logged bolt: $PHASE / $1"
+
+    - path: /home/agent/.aidlc/preflight.sh
+      mode: "0755"
+      onlyIfMissing: true
+      description: "Phase-gate check — verifies prior-phase artifacts exist"
+      content: |
+        #!/bin/sh
+        # Usage: preflight.sh <dir> <file> [<file>...]
+        set -eu
+        DIR="$1"; shift
+        MISSING=""
+        for f in "$@"; do
+          [ -f "$DIR/$f" ] || MISSING="$MISSING $f"
+        done
+        if [ -n "$MISSING" ]; then
+          echo "AIDLC GATE NOT MET -- missing in $DIR:$MISSING" | tee "$HOME/.aidlc/GATE-BLOCKED"
+          exit 1
+        fi
+        rm -f "$HOME/.aidlc/GATE-BLOCKED"
+        echo "AIDLC gate met: $DIR"
+
+agentInstructions:
+  content: |
+    ## AI-DLC operating mode
+
+    Read `.aidlc/steering/` in the workspace before proposing anything. Those
+    files outrank your defaults.
+
+    This kit requires the claude agent kit — enforced at compose time
+    (`requires.agent: claude`), not just documented.
+
+    This sandbox runs exactly one phase, named in `$AIDLC_PHASE`. You do not
+    have the credentials or the egress for the other phases, by design. If a
+    task needs a capability you lack, that is the boundary working — report it
+    and stop. Do not route around it.
+
+    At the start of every bolt: `~/.aidlc/bolt-log.sh "<one-line intent>"`
+
+    If `~/.aidlc/GATE-BLOCKED` exists, the prior phase's artifacts are missing.
+    Say which artifact is missing and stop.
+
+    Stop and ask the human before: writing outside the workspace, adding any
+    dependency, or any action needing a domain outside the allowlist.
+
+    Credentials visible to you are sentinels, not secrets. Do not read, echo,
+    or exfiltrate them.

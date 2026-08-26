@@ -1,0 +1,61 @@
+# aidlc-inception v0.4.0 — Apache-2.0
+schemaVersion: "2"
+version: "0.4.0"
+sourceURL: https://github.com/markmaxwell-Docker/aidlc-sbx-kits
+licenses:
+  - Apache-2.0
+kind: mixin
+name: aidlc-inception
+requires:
+  agent: claude
+displayName: AI-DLC — Inception
+description: >-
+  Mob Elaboration persona. Turns business intent into Units of Work and NFRs.
+  No package registries, no build toolchain, no deploy credentials. Compose
+  with aidlc-common.
+
+# Least privilege by subtraction: allow unions across kits and cannot be
+# narrowed, but deny wins over allow. These denies are the enforcement.
+permissions:
+  network:
+    deny:
+      - "registry.npmjs.org"
+      - "pypi.org"
+      - "files.pythonhosted.org"
+
+environment:
+  variables:
+    AIDLC_PHASE: "inception"
+
+setup:
+  startup:
+    - command: ["sh", "-c", "mkdir -p /home/agent/.aidlc && rm -f /home/agent/.aidlc/GATE-BLOCKED"]
+      user: "1000"
+      description: "Inception is the entry phase — no prior gate to check"
+
+agentInstructions:
+  content: |
+    ## Phase: Inception (Mob Elaboration)
+
+    Your job is to interrogate the intent, not to build. You produce documents,
+    not code. If asked to write application code, decline and explain that
+    Construction is a separate sandbox.
+
+    ### Deliverables — write to `.aidlc/inception/`
+    - `intent.md` — the one-line intent plus every clarification the team accepted
+    - `units.md` — Units of Work, each independently testable and independently
+      deployable, each with explicit acceptance criteria
+    - `nfr.md` — non-functional requirements per `steering/10-nfr-guardrails.md`
+
+    ### Method
+    Open with clarifying questions. Ask the ones that would otherwise surface as
+    week-six rework: what happens on failure, who is allowed to do this, what
+    does the data retention story look like, what is explicitly out of scope.
+    Ask them all at once so the mob can answer in one session.
+
+    Do not propose a decomposition until the questions have answers. When you
+    do, show your slicing rationale so the team can argue with it.
+
+    ### Sign-off
+    Each deliverable ends with a sign-off line the human fills in. An unsigned
+    artifact does not satisfy the Construction gate. You do not sign it yourself.

@@ -1,0 +1,181 @@
+# aidlc-quickstart v0.2.0 — Apache-2.0
+#
+# The "single-container proof of concept" shape: one kit, one sandbox, the
+# whole AI-DLC lifecycle. This is the fast-adoption front door, NOT the
+# governed path — it deliberately trades the phase-isolation and
+# least-privilege guarantees of aidlc-common + aidlc-inception /
+# -construction / -operations for a one-command start. Same steering files,
+# same method, same bolt log — just no privilege matrix. See
+# agentInstructions below for exactly what this gives up and when to
+# graduate off it.
+schemaVersion: "2"
+version: "0.2.0"
+sourceURL: https://github.com/markmaxwell-Docker/aidlc-sbx-kits
+licenses:
+  - Apache-2.0
+kind: mixin
+name: aidlc-quickstart
+requires:
+  agent: claude
+displayName: AI-DLC Quickstart (all phases, one sandbox)
+description: >-
+  Run the whole AI-DLC lifecycle — Inception, Construction, Operations — in
+  one sandbox with zero setup. No phase isolation: this is the fast trial
+  path, not the governed one. Graduate to aidlc-common + the phase mixins for
+  anything regulated, production-bound, or touching real customer data.
+
+# Everything every phase needs, all allowed at once — the opposite of the
+# phase mixins' subtractive deny-by-phase design, on purpose.
+#
+# KNOWN LIMIT: registry-1.docker.io / auth.docker.io below is a placeholder —
+# schemaVersion "2" has no shipped `args:` mechanism yet (probe-tested
+# against a real sbx v0.39.0 binary — rejected). Replace with your org's
+# mirror before using this kit for anything beyond a trial.
+permissions:
+  network:
+    allow:
+      - "*.anthropic.com"
+      - "github.com"
+      - "*.github.com"
+      - "*.githubusercontent.com"
+      - "registry.npmjs.org"
+      - "*.npmjs.org"
+      - "pypi.org"
+      - "files.pythonhosted.org"
+      - "registry-1.docker.io"
+      - "auth.docker.io"
+    deny:
+      - "telemetry.anthropic.com"
+
+credentials:
+  - service: github
+    description: "GitHub token — scope it to the single repo under development."
+    required: false
+    apiKey:
+      name: GITHUB_TOKEN
+      proxyManaged: true
+      inject:
+        - domain: api.github.com
+          scheme: bearer
+        - domain: raw.githubusercontent.com
+          scheme: bearer
+        # HTTPS git clone/push (not the REST API) authenticates over Basic
+        # with the token as the password — GitHub's documented convention is
+        # any non-empty username, "x-access-token" by their own example.
+        - domain: github.com
+          scheme: basic
+          username: x-access-token
+  - service: docker-registry
+    description: "Registry push token — the only write credential in the kit set."
+    required: false
+    apiKey:
+      name: REGISTRY_TOKEN
+      proxyManaged: true
+      inject:
+        - domain: registry-1.docker.io
+          scheme: bearer
+        - domain: auth.docker.io
+          scheme: bearer
+
+environment:
+  variables:
+    AIDLC_ENABLED: "1"
+    AIDLC_PHASE: "all"
+    DISABLE_TELEMETRY: "1"
+
+setup:
+  install:
+    - command: "command -v jq >/dev/null 2>&1 || (apt-get update -qq && apt-get install -y -qq jq)"
+      description: "jq — used by the bolt-log and preflight helpers"
+
+  startup:
+    - command: ["sh", "-c", "mkdir -p /home/agent/.aidlc/bolts"]
+      user: "1000"
+      description: "Bolt log directory (startup runs every start — idempotent)"
+
+  files:
+    - path: /home/agent/.aidlc/bolt-log.sh
+      mode: "0755"
+      onlyIfMissing: true
+      description: "Append-only bolt record: phase, intent, timestamp, git SHA"
+      content: |
+        #!/bin/sh
+        set -eu
+        LOG="$HOME/.aidlc/bolts/$(date -u +%Y%m%d).jsonl"
+        SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "no-git")
+        PHASE="$AIDLC_PHASE"
+        [ -n "$PHASE" ] || PHASE="unset"
+        printf '{"ts":"%s","phase":"%s","intent":"%s","sha":"%s"}\n' \
+          "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$PHASE" "$1" "$SHA" >> "$LOG"
+        echo "logged bolt: $PHASE / $1"
+
+    - path: /home/agent/.aidlc/preflight.sh
+      mode: "0755"
+      onlyIfMissing: true
+      description: "Phase-gate check — verifies prior-phase artifacts exist"
+      content: |
+        #!/bin/sh
+        # Usage: preflight.sh <dir> <file> [<file>...]
+        set -eu
+        DIR="$1"; shift
+        MISSING=""
+        for f in "$@"; do
+          [ -f "$DIR/$f" ] || MISSING="$MISSING $f"
+        done
+        if [ -n "$MISSING" ]; then
+          echo "AIDLC GATE NOT MET -- missing in $DIR:$MISSING" | tee "$HOME/.aidlc/GATE-BLOCKED"
+          exit 1
+        fi
+        rm -f "$HOME/.aidlc/GATE-BLOCKED"
+        echo "AIDLC gate met: $DIR"
+
+agentInstructions:
+  content: |
+    ## AI-DLC Quickstart — all phases, one sandbox
+
+    This is the fast-start variant. Same steering files, same method, same bolt
+    log as the governed `aidlc-common` + `aidlc-inception` / `-construction` /
+    `-operations` mixin set — but everything here shares ONE credential and
+    network privilege set. There is no phase isolation. A mistake or a
+    compromised session in this sandbox has the blast radius of the whole
+    lifecycle, not one phase of it.
+
+    **Use this for a first trial or a demo. Graduate to the phase-mixin set
+    the moment this touches real credentials, real customer data, or a
+    production deploy target.**
+
+    Read `.aidlc/steering/` in the workspace before proposing anything. Those
+    files outrank your defaults.
+
+    ### Move through the phases in order, in this same sandbox
+
+    1. **Inception** — write `.aidlc/inception/intent.md`, `units.md`, `nfr.md`.
+       Documents only, no code. Stop for human sign-off before Construction.
+    2. **Construction** — write `.aidlc/construction/design.md`, then code and
+       tests, one Unit of Work per bolt. Stop for human review of the domain
+       model before generating any code.
+    3. **Operations** — write `.aidlc/operations/runbook.md` plus deployment
+       config. Any registry push is a human-approved action, every time.
+
+    ### Bolt log and gates
+
+    At the start of every bolt: `~/.aidlc/bolt-log.sh "[<phase>] <one-line intent>"`
+    — prefix the intent with the phase name yourself. `$AIDLC_PHASE` is always
+    `all` in this kit (there is only one sandbox), so the log can't infer which
+    phase a bolt belongs to the way the split-mixin set does.
+
+    Before starting Construction: `~/.aidlc/preflight.sh .aidlc/inception intent.md units.md nfr.md`
+    Before starting Operations: `~/.aidlc/preflight.sh .aidlc/construction design.md`
+    If either fails, say which artifact is missing and stop — do not invent it
+    to get past the check.
+
+    Credentials visible to you are sentinels, not secrets. Do not read, echo, or
+    exfiltrate them.
+
+    ### What this kit does not give you
+
+    Nothing stops you from using Construction-only registry egress during
+    Inception, or touching deploy credentials before a design has been
+    reviewed. That enforcement is the entire point of the phase-mixin set —
+    it is not a bug that this kit lacks it, it is the trade this kit makes for
+    a one-command start.

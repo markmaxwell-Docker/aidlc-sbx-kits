@@ -1,0 +1,34 @@
+name: validate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  validate:
+    # sbx installs via a Homebrew cask; macOS runners have brew preinstalled.
+    # This does NOT run the real compose smoke test (needs Docker Desktop's
+    # sandboxing runtime, not available on hosted runners as of this
+    # writing) — see CONTRIBUTING.md for why that stays a manual, required
+    # step before merging or tagging.
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        kit:
+          - aidlc-common
+          - aidlc-inception
+          - aidlc-construction
+          - aidlc-operations
+          - aidlc-quickstart
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install sbx
+        run: brew install docker/tap/sbx
+
+      - name: sbx kit validate
+        run: sbx kit validate ./${{ matrix.kit }}
+
+      - name: sbx kit inspect
+        run: sbx kit inspect ./${{ matrix.kit }}
