@@ -135,7 +135,13 @@ GitHub's own documented convention for token-authenticated git-over-HTTPS.
 ## Known limits — state these honestly
 
 1. Kits are experimental. The spec, the CLI, and the kit management
-   experience are subject to change. Pin remote refs by digest or 40-hex SHA.
+   experience are subject to change. **Pin every remote reference** — by
+   tag (what this README's own examples use, since we own the tags on this
+   repo and don't move them) or a 40-hex commit SHA for the strictest
+   guarantee. This is a hard requirement, not a suggestion: CI's
+   `lint-pinned-refs` job fails the build on any `git+https://` reference in
+   a tracked markdown file that has no `#ref=` fragment at all — see
+   [CONTRIBUTING.md](./CONTRIBUTING.md).
 2. **`args:` (installer-supplied kit parameters) is documented in the kit
    spec but not shipped in any released `sbx` as of this writing** — probe-
    tested directly against v0.38.0 and v0.39.0, both reject it. That's why

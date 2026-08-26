@@ -6,6 +6,15 @@ on:
     branches: [main]
 
 jobs:
+  lint-pinned-refs:
+    # Hard requirement, not a suggestion — see README "Known limits" and
+    # CONTRIBUTING.md. Fails the build on any git+https:// kit reference in
+    # a tracked markdown file that lacks a #ref= fragment.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./scripts/lint-pinned-refs.sh
+
   validate:
     # sbx installs via a Homebrew cask; macOS runners have brew preinstalled.
     # This does NOT run the real compose smoke test (needs Docker Desktop's

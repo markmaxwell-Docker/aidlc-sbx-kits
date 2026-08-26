@@ -30,9 +30,15 @@ says nothing about the others.
 
 ## What CI actually checks (and what it doesn't)
 
-CI (`.github/workflows/validate.yml`) runs `sbx kit validate` against every
-kit on every PR, on a macOS runner (the `sbx` CLI installs via
-`brew install docker/tap/sbx`). This catches schema errors per kit.
+CI (`.github/workflows/validate.yml`) runs two jobs on every PR:
+
+- **`lint-pinned-refs`** — fails the build if any `git+https://` kit
+  reference in a tracked markdown file is missing a `#ref=` fragment.
+  This is the enforced side of the pinning requirement below — not just
+  prose. Run it locally: `./scripts/lint-pinned-refs.sh`.
+- **`validate`** — runs `sbx kit validate`/`sbx kit inspect` against every
+  kit, on a macOS runner (`sbx` installs via `brew install docker/tap/sbx`).
+  Catches schema errors per kit.
 
 **CI does not run the real compose smoke test above.** That requires Docker
 Desktop's sandboxing runtime, which isn't available on hosted GitHub Actions
