@@ -20,6 +20,25 @@ a real `sbx run --kit ...` compose against the embedded `claude` agent kit
 both pass clean for every combination below. See "Known limits" for what's
 still not shipped or not enforced by the engine.
 
+## Origin and goals
+
+This repo exists to satisfy two deliverables:
+
+1. **A reusable, generally applicable integration between Docker Sandboxes
+   and AI-DLC** — not exclusive to any one customer or engagement. The five
+   kits above are that integration: authored, tested, and documented against
+   the real `sbx` kit engine rather than any one org's environment. An
+   earlier draft of these kits was built for a single customer engagement;
+   the customer-specific framing was stripped before anything here was
+   published — what's left is the reusable design (phase isolation, the
+   privilege matrix, deny-wins-over-allow least privilege), generalized.
+2. **Contributing a reusable Docker + AI-DLC kit to an open-source kits
+   repository, with ongoing maintenance defined** — this repo is that
+   contribution. "Ongoing maintenance" is concrete, not aspirational: see
+   CONTRIBUTING.md's "Compatibility review cadence" and "Versioning and
+   tagging" sections, and the automated quarterly review routine linked
+   there.
+
 ## Install
 
 Remote kit sources are allowlisted by `sbx` — by default only `docker.io/`

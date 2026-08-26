@@ -79,3 +79,19 @@ should be re-validated against the current `sbx` release **at least
 quarterly**, not only when someone files an issue. If a kit hasn't been
 re-verified within 90 days of a schema-breaking `sbx` release, mark it
 `[unmaintained]` in its README until it has been.
+
+This is automated, not just a policy statement: a scheduled cloud routine
+runs quarterly (Jan/Apr/Jul/Oct 1st), checks `sbx-releases`/
+`sbx-kits-contrib` for schema drift, checks this repo's own CI health, reads
+all five `spec.yaml` files for anything that looks broken, and opens a PR
+with a dated `COMPAT_REVIEW_<date>.md` findings report — flagging any kit
+that needs the `[unmaintained]` mark above. Managed at
+[claude.ai/code/routines](https://claude.ai/code/routines) (routine id
+`trig_01BrhA6TBt5wU7FB36HY2gPR`).
+
+**What the routine cannot do**, by design: it runs in a cloud sandbox with
+no `sbx` binary and no Docker Desktop, so it cannot run the real
+`sbx kit validate`/`inspect` or the compose smoke test above — it can only
+read release notes, read CI status, and read the specs. Its PR is a
+findings report and a prompt for a human to run the real checks, not a
+substitute for them.
